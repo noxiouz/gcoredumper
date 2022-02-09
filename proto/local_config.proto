@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package config;
+
+import "dumper/dumper_config.proto"; 
+
+
+option go_package = "github.com/noxiouz/gcoredumper/core";
+
+message LocalConfig {
+    dumper.Configuraion dumper = 1;
+}
