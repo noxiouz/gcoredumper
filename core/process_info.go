@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"debug/elf"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/afero"
 
 	"github.com/noxiouz/gcoredumper/report"
+	"github.com/noxiouz/gcoredumper/utils/buildid"
 	"github.com/noxiouz/gcoredumper/utils/environ"
 )
 
@@ -70,6 +72,10 @@ func NewProcessInfo(ctx context.Context, globalPid int64, localPid int64, global
 	pi.binary = filepath.Base(pi.excutable)
 	report.R(ctx).AddString("binary", pi.binary)
 
+	if err := extractElfInfo(procFs, report.R(ctx)); err != nil {
+		return nil, err
+	}
+
 	// Read environment vars
 	environFile, err := procFs.Open("environ")
 	if err != nil {
@@ -94,4 +100,25 @@ func (p *processInfoImpl) Env() environ.Environ {
 
 func (p *processInfoImpl) CorefileName() string {
 	return fmt.Sprintf("%s.%d.%d", p.binary, p.globalPid, p.globalTid)
+}
+
+func extractElfInfo(procFs afero.Fs, rep *report.Report) error {
+	exe, err := procFs.Open("exe")
+	if err != nil {
+		return err
+	}
+	defer exe.Close()
+
+	ef, err := elf.NewFile(exe)
+	if err != nil {
+		return err
+	}
+
+	buildId, err := buildid.New(ef)
+	if err != nil {
+		return err
+	}
+
+	rep.AddString("binary.buildid", buildId)
+	return nil
 }
