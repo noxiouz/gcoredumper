@@ -8,7 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	dumper "github.com/noxiouz/gcoredumper/dumper"
+	"github.com/noxiouz/gcoredumper/configuration"
+	"github.com/noxiouz/gcoredumper/dumper"
 	"github.com/noxiouz/gcoredumper/report"
 	"github.com/spf13/afero"
 )
@@ -59,14 +60,8 @@ func skipCoredump() bool {
 	return false
 }
 
-func Run(ctx context.Context, si SystemInput) error {
+func Run(ctx context.Context, si SystemInput, config *configuration.Config) error {
 	reporter := report.R(ctx)
-	config := LocalConfig{
-		Dumper: &dumper.Configuraion{
-			Compression:      dumper.Configuraion_PLANE,
-			MaxDiskUsagePrct: 99,
-		},
-	}
 	reporter.AddInt("signal", int64(si.Signal))
 
 	pi, err := NewProcessInfo(ctx, si.InitialPid, si.NsPid, si.InitialTid, si.NsTid, afero.NewOsFs())
@@ -75,7 +70,7 @@ func Run(ctx context.Context, si SystemInput) error {
 	}
 
 	if si.PrGetDumpable.AllowCoreDump() {
-		if _, err := dumper.New(afero.NewOsFs()).Dump(ctx, si.Stream, filepath.Join("/tmp", pi.CorefileName()), config.Dumper); err != nil {
+		if _, err := dumper.New(afero.NewOsFs()).Dump(ctx, si.Stream, filepath.Join(config.CorefilesDirectory, pi.CorefileName()), config.Dumper); err != nil {
 			return err
 		}
 	} else {

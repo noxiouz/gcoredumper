@@ -12,6 +12,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/noxiouz/gcoredumper/configuration/configurator"
+	_ "github.com/noxiouz/gcoredumper/configuration/configurator/localfile"
 	"github.com/noxiouz/gcoredumper/core"
 	"github.com/noxiouz/gcoredumper/report"
 )
@@ -25,7 +27,7 @@ var (
 	signalNum      = flag.Int("s", 0, "signal num %s")
 	dumpable       = flag.Int("d", 0, "dumpable")
 	timestampInSec = flag.Int64("t", 0, "")
-	configPath     = flag.String("cfg", "./config.textproto", "path to config")
+	config         = flag.String("cfg", "embed:null", "path to config")
 )
 
 func SetUpLogger(w io.Writer) {
@@ -36,17 +38,27 @@ func SetUpLogger(w io.Writer) {
 func main() {
 	flag.Parse()
 	reporter := report.New()
-	sink := &report.LogBasedReporter{Logger: log.Default()}
-	defer reporter.Report(sink)
-
 	// TODO(noxiouz): make configurable
-	f, err := os.OpenFile("/var/log/gcoredumper.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	cfg, err := configurator.Open("embed", "")
 	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	config, err := cfg.Get(context.Background())
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+	f, err := os.OpenFile(config.LogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Println(err)
 		SetUpLogger(io.Discard)
 	} else {
 		SetUpLogger(f)
 		defer f.Close()
 	}
+	sink := &report.LogBasedReporter{Logger: log.Default()}
+	defer reporter.Report(sink)
+	log.Println("Start dump")
 
 	ctx := report.WithReport(context.Background(), reporter)
 	// TODO: add required arguments check
@@ -71,8 +83,9 @@ func main() {
 		Stream: os.Stdin,
 	}
 
-	err = core.Run(ctx, si)
+	err = core.Run(ctx, si, config)
 	if err != nil {
+		log.Println(err)
 		reporter.AddError("core.run.error", err)
 	}
 }

@@ -1,0 +1,9 @@
+logFile: "/var/log/gcoredumper.log"
+corefilesDirectory: "/tmp"
+    
+core: {}
+    
+dumper: {
+    compression: PLANE
+    max_disk_usage_prct: 99
+}

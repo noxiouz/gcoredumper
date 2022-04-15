@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/klauspost/compress/snappy"
 	"github.com/klauspost/compress/zstd"
+	"github.com/noxiouz/gcoredumper/configuration"
 	"github.com/spf13/afero"
 )
 
@@ -35,8 +36,8 @@ func TestDumpErrors(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d := New(afero.NewMemMapFs())
-			_, err := d.Dump(tc.ctx, bytes.NewBufferString(tc.filepath), tc.filepath, &Configuraion{
-				Compression: Configuraion_PLANE,
+			_, err := d.Dump(tc.ctx, bytes.NewBufferString(tc.filepath), tc.filepath, &configuration.Config_DumperConfig{
+				Compression: configuration.Config_DumperConfig_PLANE,
 			})
 			if err == nil { // if NO error
 				t.Errorf("Dump() expected to return an error, but got nil")
@@ -50,12 +51,12 @@ func TestDumpWithCompression(t *testing.T) {
 	input := []byte("some_non_random_content")
 	for _, tc := range []struct {
 		name        string
-		compression Configuraion_Compression
+		compression configuration.Config_DumperConfig_Compression
 		want        []byte
 	}{
 		{
-			name:        Configuraion_ZSTD.String(),
-			compression: Configuraion_ZSTD,
+			name:        configuration.Config_DumperConfig_ZSTD.String(),
+			compression: configuration.Config_DumperConfig_ZSTD,
 			want: func() []byte {
 				buff := bytes.NewBuffer(nil)
 				enc, _ := zstd.NewWriter(buff)
@@ -65,8 +66,8 @@ func TestDumpWithCompression(t *testing.T) {
 			}(),
 		},
 		{
-			name:        Configuraion_SNAPPY.String(),
-			compression: Configuraion_SNAPPY,
+			name:        configuration.Config_DumperConfig_SNAPPY.String(),
+			compression: configuration.Config_DumperConfig_SNAPPY,
 			want: func() []byte {
 				buff := bytes.NewBuffer(nil)
 				snappy.NewWriter(buff).Write(input)
@@ -74,15 +75,15 @@ func TestDumpWithCompression(t *testing.T) {
 			}(),
 		},
 		{
-			name:        Configuraion_PLANE.String(),
-			compression: Configuraion_PLANE,
+			name:        configuration.Config_DumperConfig_PLANE.String(),
+			compression: configuration.Config_DumperConfig_PLANE,
 			want:        input,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fs := afero.NewMemMapFs()
 			d := New(fs)
-			f, err := d.Dump(ctx, bytes.NewReader(input), "/corefile1", &Configuraion{
+			f, err := d.Dump(ctx, bytes.NewReader(input), "/corefile1", &configuration.Config_DumperConfig{
 				Compression: tc.compression,
 			})
 			if err != nil {

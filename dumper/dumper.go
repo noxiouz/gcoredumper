@@ -16,6 +16,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/spf13/afero"
 
+	"github.com/noxiouz/gcoredumper/configuration"
 	"github.com/noxiouz/gcoredumper/report"
 	"github.com/noxiouz/gcoredumper/utils/xioutil"
 )
@@ -30,7 +31,7 @@ func New(fs afero.Fs) *Dumper {
 	}
 }
 
-func (d *Dumper) Dump(ctx context.Context, r io.Reader, filepath string, config *Configuraion) (string, error) {
+func (d *Dumper) Dump(ctx context.Context, r io.Reader, filepath string, config *configuration.Config_DumperConfig) (string, error) {
 	reporter := report.R(ctx)
 	dumpStarted := time.Now()
 
@@ -90,26 +91,26 @@ func (d *Dumper) Dump(ctx context.Context, r io.Reader, filepath string, config 
 	return filepath, err
 }
 
-func newCompressor(cfg *Configuraion, wr io.Writer) (io.WriteCloser, error) {
+func newCompressor(cfg *configuration.Config_DumperConfig, wr io.Writer) (io.WriteCloser, error) {
 	switch compression := cfg.GetCompression(); compression {
-	case Configuraion_PLANE:
+	case configuration.Config_DumperConfig_PLANE:
 		return writerNopCloser{wr}, nil
-	case Configuraion_ZSTD:
+	case configuration.Config_DumperConfig_ZSTD:
 		return zstd.NewWriter(wr)
-	case Configuraion_SNAPPY:
+	case configuration.Config_DumperConfig_SNAPPY:
 		return snappy.NewBufferedWriter(wr), nil
 	default:
 		return nil, fmt.Errorf("unknown Compression type %d", compression)
 	}
 }
 
-func getCorefileSuffix(compression Configuraion_Compression) string {
+func getCorefileSuffix(compression configuration.Config_DumperConfig_Compression) string {
 	switch compression {
-	case Configuraion_PLANE:
+	case configuration.Config_DumperConfig_PLANE:
 		return ""
-	case Configuraion_ZSTD:
+	case configuration.Config_DumperConfig_ZSTD:
 		return ".zstd"
-	case Configuraion_SNAPPY:
+	case configuration.Config_DumperConfig_SNAPPY:
 		return ".snappy"
 	default:
 		return ""
