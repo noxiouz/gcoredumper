@@ -3,11 +3,14 @@ package core
 import (
 	"context"
 	"io"
+	"log"
+	"os"
 	"path/filepath"
 
 	"syscall"
 	"time"
 
+	"github.com/noxiouz/gcoredumper/bpfbacktracer"
 	"github.com/noxiouz/gcoredumper/configuration"
 	"github.com/noxiouz/gcoredumper/dumper"
 	"github.com/noxiouz/gcoredumper/report"
@@ -67,6 +70,17 @@ func Run(ctx context.Context, si SystemInput, config *configuration.Config) erro
 	pi, err := NewProcessInfo(ctx, si.InitialPid, si.NsPid, si.InitialTid, si.NsTid, afero.NewOsFs())
 	if err != nil {
 		return err
+	}
+
+	m, err := bpfbacktracer.LoadBacktracesMap()
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	defer m.Close()
+	var b bpfbacktracer.Backtrace
+	m.Lookup(bpfbacktracer.Key(si.InitialTid), &b)
+	for _, vaddr := range b.Vaddrs {
+		log.Printf("Addr %x", vaddr)
 	}
 
 	if si.PrGetDumpable.AllowCoreDump() {

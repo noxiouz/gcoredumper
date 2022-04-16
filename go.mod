@@ -3,7 +3,8 @@ module github.com/noxiouz/gcoredumper
 go 1.18
 
 require (
-	github.com/google/go-cmp v0.5.5
+	github.com/cilium/ebpf v0.8.1
+	github.com/google/go-cmp v0.5.6
 	github.com/google/uuid v1.3.0
 	github.com/klauspost/compress v1.15.1
 	github.com/spf13/afero v1.8.2
