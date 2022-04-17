@@ -16,5 +16,12 @@
 
 # protobuf
 *.pb.go
+
 gcoredumper
 gcoredumperbpf
+
+# bazel
+bazel-bin/
+bazel-out/
+bazel-testlogs/
+bazel-*
