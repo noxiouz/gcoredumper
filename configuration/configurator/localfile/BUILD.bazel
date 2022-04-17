@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "localfile",
+    srcs = [
+        "embeded.go",
+        "filebased.go",
+    ],
+    embedsrcs = ["config_samle.prototxt"],
+    importpath = "github.com/noxiouz/gcoredumper/configuration/configurator/localfile",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//configuration/configurator",
+        "//proto:configuration_go_proto",
+        "@org_golang_google_protobuf//encoding/prototext:go_default_library",
+    ],
+)
