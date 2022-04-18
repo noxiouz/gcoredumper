@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package configuration;
+
+option go_package = "github.com/noxiouz/gcoredumper/configuration";
+
+message Config {
+  message DumperConfig {
+    enum Compression {
+      UNKNOWN = 0;
+      PLANE = 1;
+      ZSTD = 2;
+      SNAPPY = 3;
+    }
+    Compression compression = 1;
+    int32 max_disk_usage_prct = 2;
+    // TODO: add options for autoclean
+    // keep last
+  }
+
+  message CoreConfig {}
+
+  string corefilesDirectory = 1;
+  string logFile = 2;
+
+  CoreConfig core = 3;
+  DumperConfig dumper = 4;
+}

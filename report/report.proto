@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package report;
+
+import "google/protobuf/duration.proto";
+
+option go_package = "github.com/noxiouz/gcoredumper/report";
+
+message Record {
+  string name = 1;
+
+  oneof value {
+    int64 number = 2;
+    string str = 3;
+    google.protobuf.Duration duration = 4;
+    bytes buf = 5;
+    StackTrace stacktrace = 6;
+  }
+}
+
+message StackTrace {
+  message Frame {
+    string func = 1;
+    uint64 addr = 2;
+    uint64 line = 3;
+  }
+  repeated Frame frames = 1;
+}

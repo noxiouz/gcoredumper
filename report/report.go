@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 var (
@@ -28,67 +30,64 @@ func GetReport(ctx context.Context) *Report {
 
 // Report provides an interface to collect specific types of key-value pairs.
 type Report struct {
-	mu sync.Mutex
-	m  map[string]any
+	mu      sync.Mutex
+	records []*Record
 }
 
 func New() *Report {
-	return &Report{
-		m: make(map[string]any),
-	}
+	return &Report{}
 }
 
 // AddInt adds int64 value to report
 func (r *Report) AddInt(key string, v int64) {
-	r.add(key, v)
+	r.add(&Record{
+		Name:  key,
+		Value: &Record_Number{v},
+	})
 }
 
 // AddString adds string value to report
 func (r *Report) AddString(key string, v string) {
-	r.add(key, v)
+	r.add(&Record{
+		Name:  key,
+		Value: &Record_Str{v},
+	})
 }
 
 func (r *Report) AddError(key string, err error) {
-	r.add(key, err)
+	var msg string
+	if err != nil {
+		msg = err.Error()
+	} else {
+		msg = "<nil>"
+	}
+	r.add(&Record{
+		Name:  key,
+		Value: &Record_Str{msg},
+	})
 }
 
 func (r *Report) AddDuration(key string, value time.Duration) {
-	r.add(key, value)
+	r.add(&Record{
+		Name:  key,
+		Value: &Record_Duration{durationpb.New(value)},
+	})
 }
 
-func (r *Report) add(key string, v any) {
+func (r *Report) add(record *Record) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.m[key] = v
+	r.records = append(r.records, record)
 }
 
-func (r *Report) Report(sink Sink) error {
+func (r *Report) Report(s Sink) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-
-	for key, value := range r.m {
-		var err error
-		switch value := value.(type) {
-		case int64:
-			err = sink.ReportInt(key, value)
-		case string:
-			err = sink.ReportString(key, value)
-		case error:
-			err = sink.ReportError(key, value)
-		case time.Duration:
-			err = sink.ReportDuration(key, value)
-		}
-		if err != nil {
-			return err
-		}
+	for _, record := range r.records {
+		s.Log(record)
 	}
-
-	return nil
 }
 
 type Sink interface {
-	ReportError(key string, value error) error
-	ReportInt(key string, value int64) error
-	ReportString(key string, value string) error
-	ReportDuration(key string, value time.Duration) error
+	Log(record *Record)
 }

@@ -1,2 +1,2 @@
-//go:generate protoc --go_out=paths=source_relative:.  -I ../proto config.proto
+//go:generate protoc --go_out=paths=source_relative:.  -I . config.proto
 package configuration

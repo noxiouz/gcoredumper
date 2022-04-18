@@ -1,4 +1,23 @@
 load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@io_bazel_rules_go//proto:def.bzl", "go_proto_library")
+
+proto_library(
+    name = "report_proto",
+    srcs = ["report.proto"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_google_protobuf//:duration_proto",
+    ],
+)
+
+go_proto_library(
+    name = "report_go_proto",
+    compiler = "//:golang_google_proto",
+    importpath = "github.com/noxiouz/gcoredumper/report",
+    protos = [":report_proto"],
+    visibility = ["//visibility:public"],
+)
 
 go_library(
     name = "report",
@@ -6,6 +25,10 @@ go_library(
         "logbased.go",
         "report.go",
     ],
+    embed = [":report_go_proto"],
     importpath = "github.com/noxiouz/gcoredumper/report",
     visibility = ["//visibility:public"],
+    deps = [
+        "@org_golang_google_protobuf//types/known/durationpb",
+    ],
 )

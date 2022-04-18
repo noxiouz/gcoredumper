@@ -6,6 +6,6 @@ go_library(
     importpath = "github.com/noxiouz/gcoredumper/configuration/configurator",
     visibility = ["//visibility:public"],
     deps = [
-        "//proto:configuration_go_proto",
+        "//configuration:configuration_go_proto",
     ],
 )
