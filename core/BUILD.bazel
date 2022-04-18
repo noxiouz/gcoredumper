@@ -12,7 +12,7 @@ go_library(
     deps = [
         "//bpfbacktracer",
         "//dumper",
-        "//proto:configuration_go_proto",
+        "//configuration:configuration_go_proto",
         "//report",
         "//utils/buildid",
         "//utils/environ",
