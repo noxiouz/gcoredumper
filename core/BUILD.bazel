@@ -3,6 +3,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 go_library(
     name = "core",
     srcs = [
+        "actions.go",
         "core.go",
         "process_info.go",
     ],
@@ -15,6 +16,8 @@ go_library(
         "//report",
         "//utils/buildid",
         "//utils/environ",
-        "@com_github_spf13_afero//:go_default_library",
+        "@com_github_spf13_afero//:afero",
+        "@org_golang_x_sync//errgroup",
+        "@org_golang_x_sys//unix",
     ],
 )

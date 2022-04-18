@@ -4,24 +4,19 @@ import (
 	"context"
 	"debug/elf"
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 
 	"github.com/spf13/afero"
+	"golang.org/x/sys/unix"
 
 	"github.com/noxiouz/gcoredumper/report"
 	"github.com/noxiouz/gcoredumper/utils/buildid"
 	"github.com/noxiouz/gcoredumper/utils/environ"
 )
 
-type ProcessInfo interface {
-	HasPIDNamespace() bool
-	IsBinaryDeleted() bool
-	Env() environ.Environ
-	CorefileName() string
-}
-
-type processInfoImpl struct {
+type ProcessInfo struct {
 	// pid in a global/local namespace
 	globalPid int64
 	localPid  int64
@@ -36,14 +31,16 @@ type processInfoImpl struct {
 	executableDeleted bool
 	//
 	env environ.Environ
+
+	utsname unix.Utsname
 }
 
 const (
 	deletedBinarySuffix = "(deleted)"
 )
 
-func NewProcessInfo(ctx context.Context, globalPid int64, localPid int64, globalTid int64, localTid int64, filesystem afero.Fs) (ProcessInfo, error) {
-	pi := processInfoImpl{
+func NewProcessInfo(ctx context.Context, globalPid int64, localPid int64, globalTid int64, localTid int64, filesystem afero.Fs) (*ProcessInfo, error) {
+	pi := &ProcessInfo{
 		globalPid: globalPid,
 		localPid:  localPid,
 		globalTid: globalTid,
@@ -76,6 +73,12 @@ func NewProcessInfo(ctx context.Context, globalPid int64, localPid int64, global
 		return nil, err
 	}
 
+	if err := unix.Uname(&pi.utsname); err != nil {
+		return nil, err
+	}
+	report.R(ctx).AddString("os.name", string(pi.utsname.Sysname[:]))
+	report.R(ctx).AddString("os.version", string(pi.utsname.Release[:]))
+	log.Printf("%s", pi.utsname.Version)
 	// Read environment vars
 	environFile, err := procFs.Open("environ")
 	if err != nil {
@@ -83,22 +86,22 @@ func NewProcessInfo(ctx context.Context, globalPid int64, localPid int64, global
 	}
 	defer environFile.Close()
 	pi.env = environ.New(environFile)
-	return &pi, nil
+	return pi, nil
 }
 
-func (p *processInfoImpl) HasPIDNamespace() bool {
+func (p *ProcessInfo) HasPIDNamespace() bool {
 	return p.globalPid == p.localPid
 }
 
-func (p *processInfoImpl) IsBinaryDeleted() bool {
+func (p *ProcessInfo) IsBinaryDeleted() bool {
 	return p.executableDeleted
 }
 
-func (p *processInfoImpl) Env() environ.Environ {
+func (p *ProcessInfo) Env() environ.Environ {
 	return p.env
 }
 
-func (p *processInfoImpl) CorefileName() string {
+func (p *ProcessInfo) CorefileName() string {
 	return fmt.Sprintf("%s.%d.%d", p.binary, p.globalPid, p.globalTid)
 }
 
