@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log"
 	"os"
@@ -10,11 +11,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/spf13/afero"
+	"golang.org/x/sync/errgroup"
+
 	"github.com/noxiouz/gcoredumper/bpfbacktracer"
 	"github.com/noxiouz/gcoredumper/configuration"
 	"github.com/noxiouz/gcoredumper/dumper"
 	"github.com/noxiouz/gcoredumper/report"
-	"github.com/spf13/afero"
 )
 
 type Dumpable int
@@ -63,6 +66,10 @@ func skipCoredump() bool {
 	return false
 }
 
+type Action interface {
+	Run(ctx context.Context, pinfo *ProcessInfo) error
+}
+
 func Run(ctx context.Context, si SystemInput, config *configuration.Config) error {
 	reporter := report.R(ctx)
 	reporter.AddInt("signal", int64(si.Signal))
@@ -72,16 +79,39 @@ func Run(ctx context.Context, si SystemInput, config *configuration.Config) erro
 		return err
 	}
 
-	m, err := bpfbacktracer.LoadBacktracesMap()
-	if err != nil && !os.IsNotExist(err) {
+	// BPF backtraces
+	err = func() error {
+		m, err := bpfbacktracer.LoadBacktracesMap()
+		if err != nil {
+			if os.IsNotExist(errors.Unwrap(err)) {
+				return nil
+			}
+			return err
+		}
+		defer m.Close()
+
+		var b bpfbacktracer.Backtrace
+		m.Lookup(bpfbacktracer.Key(si.InitialTid), &b)
+		for _, vaddr := range b.Vaddrs {
+			log.Printf("Addr %x", vaddr)
+		}
+		return nil
+	}()
+	if err != nil {
 		return err
 	}
-	defer m.Close()
-	var b bpfbacktracer.Backtrace
-	m.Lookup(bpfbacktracer.Key(si.InitialTid), &b)
-	for _, vaddr := range b.Vaddrs {
-		log.Printf("Addr %x", vaddr)
+
+	var actions = []Action{
+		ActionFunc(PackageVersionAction),
 	}
+	g, gctx := errgroup.WithContext(ctx)
+	for _, action := range actions {
+		action := action
+		g.Go(func() error {
+			return action.Run(gctx, pi)
+		})
+	}
+	g.Wait()
 
 	if si.PrGetDumpable.AllowCoreDump() {
 		if _, err := dumper.New(afero.NewOsFs()).Dump(ctx, si.Stream, filepath.Join(config.CorefilesDirectory, pi.CorefileName()), config.Dumper); err != nil {

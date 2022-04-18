@@ -10,11 +10,10 @@ import (
 	"path"
 	"time"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/klauspost/compress/snappy"
 	"github.com/klauspost/compress/zstd"
 	"github.com/spf13/afero"
+	"golang.org/x/sys/unix"
 
 	"github.com/noxiouz/gcoredumper/configuration"
 	"github.com/noxiouz/gcoredumper/report"

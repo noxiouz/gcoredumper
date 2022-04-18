@@ -56,6 +56,11 @@ func main() {
 		SetUpLogger(f)
 		defer f.Close()
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Recovered in main %v", r)
+		}
+	}()
 	sink := &report.LogBasedReporter{Logger: log.Default()}
 	defer reporter.Report(sink)
 	log.Println("Start dump")
@@ -85,7 +90,8 @@ func main() {
 
 	err = core.Run(ctx, si, config)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Run returned an error %v", err)
 		reporter.AddError("core.run.error", err)
 	}
+	log.Println("Done")
 }
